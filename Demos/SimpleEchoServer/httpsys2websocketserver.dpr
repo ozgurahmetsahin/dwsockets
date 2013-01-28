@@ -6,15 +6,7 @@ program httpsys2websocketserver;
 
 uses
   System.SysUtils,
-  uWebSocketEchoServer in 'Source\uWebSocketEchoServer.pas',
-  uOSWebSocketAPI in 'Source\_Library\uOSWebSocketAPI.pas',
-  uOSWebSocketServer in 'Source\_Library\uOSWebSocketServer.pas',
-  uOSWebSocketHandler in 'Source\_Library\uOSWebSocketHandler.pas',
-  SRWLock in 'O:\oddstream\Source\_Library\MessageSystem\SRWLock.pas',
-  uOSTransport in 'Source\_Library\uOSTransport.pas',
-  uOSTransportHttpSys2 in 'Source\_Library\uOSTransportHttpSys2.pas',
-  uOSWebSocket in 'Source\_Library\uOSWebSocket.pas',
-  uOSHttpSys2WebSocketServer in 'Source\_Library\uOSHttpSys2WebSocketServer.pas';
+  uWebSocketEchoServer in 'uWebSocketEchoServer.pas';
 
 var
   fEchoServer: TWebSocketEchoServer;
@@ -45,8 +37,6 @@ begin
     finally
       fEchoServer.Free;
     end;
-
-    { TODO -oUser -cConsole Main : Insert code here }
   except
     on E: Exception do
       Writeln(E.ClassName, ': ', E.Message);
