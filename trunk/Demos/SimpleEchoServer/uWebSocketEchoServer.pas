@@ -7,7 +7,8 @@ uses
   uOSWebSocketHandler,
   uOSWebSocketServer,
   uOSHttpSys2WebSocketServer,
-  dwsHTTPSysServer;
+  dwsHTTPSysServer,
+  dwsWebEnvironment;
 
 type
   TWebSocketEchoServer = class
@@ -15,7 +16,7 @@ type
     fEchoWebSocketHandler: TWebSocketHandler;
 
     //Handler Control Events
-    procedure OnEchoAcceptConnection(const InRequest: TSynHttpServerRequest; out OutRequest: TSynHttpServerResponse; var aAccept: Boolean);
+    procedure OnEchoAcceptConnection(aRequest: TWebRequest; aResponse: TWebResponse; var aAccept: Boolean);
     procedure OnEchoConnectWebSocket(const aWebSocket: TWebSocketServer);
     procedure OnEchoDisconnectWebSocket(const aWebSocket: TWebSocketServer);
 
@@ -30,7 +31,7 @@ type
   protected
     fServer: THttpApi2WebSocketServer;
 
-    function OnHttpServerRequest(const inRequest : TSynHttpServerRequest; var outResponse : TSynHttpServerResponse) : Cardinal;
+    procedure OnHttpServerRequest(aRequest : TWebRequest; aResponse : TWebResponse);
   public
     constructor Create;
     destructor Destroy; override;
@@ -85,10 +86,9 @@ begin
   inherited;
 end;
 
-function TWebSocketEchoServer.OnHttpServerRequest(const inRequest: TSynHttpServerRequest;
-  var outResponse: TSynHttpServerResponse): Cardinal;
+procedure TWebSocketEchoServer.OnHttpServerRequest(aRequest: TWebRequest; aResponse: TWebResponse);
 begin
-  Result := 404;
+  aResponse.StatusCode := 404;
 end;
 
 procedure TWebSocketEchoServer.SendToWebSocketId(const aId: Integer; const aMsg: UTF8String);
@@ -106,10 +106,9 @@ begin
   aWebSocket.OnClose := OnEchoWebSocketClose;
 end;
 
-procedure TWebSocketEchoServer.OnEchoAcceptConnection(const InRequest: TSynHttpServerRequest;
-  out OutRequest: TSynHttpServerResponse; var aAccept: Boolean);
+procedure TWebSocketEchoServer.OnEchoAcceptConnection(aRequest: TWebRequest; aResponse: TWebResponse; var aAccept: Boolean);
 begin
-  WriteLn(Format('OnEchoAcceptConnection(%d)', [InRequest.ConnectionID]));
+  WriteLn(Format('OnEchoAcceptConnection(%d)', [-1]));
   aAccept := True;
 end;
 
