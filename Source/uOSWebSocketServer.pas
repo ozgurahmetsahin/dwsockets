@@ -182,7 +182,6 @@ type
 
     procedure SetTransportEndpoint(const aTransportEndpoint: TTransportEndpoint);
 
-
     procedure SendUTF8Buffer(const aBuffer: Pointer; const aBufferSize: Cardinal); inline;
     procedure SendUTF8BufferFragment(const aBuffer: Pointer; const aBufferSize: Cardinal); inline;
     procedure SendBinaryBuffer(const aBuffer: Pointer; const aBufferSize: Cardinal); inline;
@@ -334,7 +333,7 @@ begin
   wsSendBuf.pbBuffer := aBuffer;
   wsSendBuf.ulBufferLength := aBufferSize;
 
-  InterlockedExchangeAdd(@fBufferAmount, aBufferSize);
+  InterlockedExchangeAdd(fBufferAmount, aBufferSize);
 
   WebSocketAPI.Check(
     WebSocketAPI.Send(fHandle, aBufferType, @wsSendBuf, nil),
@@ -540,7 +539,7 @@ begin
     begin
       Move(h^.pcName^, d^, h^.ulNameLength);
       Inc(d, h^.ulNameLength);
-      PWord(d)^ := Ord(':') + Ord(' ') shl 8;
+      PWord(d)^ := Ord('=') + Ord(' ') shl 8;
       Inc(d, 2);
       Move(h^.pcValue^, d^, h^.ulValueLength);
       Inc(d, h^.ulValueLength);

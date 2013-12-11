@@ -75,9 +75,9 @@ type
   WEB_SOCKET_HANDLE = Pointer;
 
   WEB_SOCKET_HTTP_HEADER = record
-    pcName: PAnsiCHAR;
+    pcName: PAnsiChar;
     ulNameLength: ULONG;
-    pcValue: PAnsiCHAR;
+    pcValue: PAnsiChar;
     ulValueLength: ULONG;
   end;
   PWEB_SOCKET_HTTP_HEADER = ^WEB_SOCKET_HTTP_HEADER;
@@ -204,13 +204,13 @@ type
     class procedure Check(const aError : HRESULT; const aApi : TWebSocketAPIs); static; inline;
   end;
 
-  EWebScoketApiServer = class (Exception)
+  EWebSocketApi = class (Exception)
   public
-     constructor Create(const aApi : TWebSocketAPIs; const aError : Integer);
+    constructor Create(const aApi : TWebSocketAPIs; const aError : Integer);
   end;
 
 var
-   WebSocketAPI : TWebSocketAPI;
+  WebSocketAPI : TWebSocketAPI;
 
 implementation
 
@@ -219,7 +219,7 @@ implementation
 class procedure TWebSocketAPI.Check(const aError: HRESULT; const aApi: TWebSocketAPIs);
 begin
   if aError <> NO_ERROR then
-    raise EWebScoketApiServer.Create(aApi, aError);
+    raise EWebSocketApi.Create(aApi, aError);
 end;
 
 class procedure TWebSocketAPI.InitializeAPI;
@@ -261,9 +261,9 @@ begin
   end;
 end;
 
-{ EWebScoketApiServer }
+{ EWebSocketApi }
 
-constructor EWebScoketApiServer.Create(const aApi: TWebSocketAPIs; const aError: Integer);
+constructor EWebSocketApi.Create(const aApi: TWebSocketAPIs; const aError: Integer);
 begin
   inherited CreateFmt('%s failed: %s (%d)!', [WebSocketFunctionNames[aApi], SysErrorMessage(aError), aError]);
 end;

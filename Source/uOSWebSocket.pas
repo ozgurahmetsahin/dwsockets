@@ -70,7 +70,7 @@ type
   protected
     fURL: UTF8String;
     fReadyState: TWebSocketReadyState;
-    fBufferAmount: Cardinal;
+    fBufferAmount: Integer;
 
     fOnOpen: TWebSocketOnOpenProc;
     fOnError: TWebSocketOnErrorProc;
@@ -96,7 +96,7 @@ type
 
     property URL: UTF8String read fURL;
     property ReadyState: TWebSocketReadyState read fReadyState;
-    property BufferAmount: Cardinal read fBufferAmount;
+    property BufferAmount: Integer read fBufferAmount;
 
     property OnOpen: TWebSocketOnOpenProc read fOnOpen write fOnOpen;
     property OnError: TWebSocketOnErrorProc read fOnError write fOnError;

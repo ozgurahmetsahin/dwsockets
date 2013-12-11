@@ -33,6 +33,7 @@ uses
   uOSWebSocket,
   uOSWebSocketServer,
   dwsHTTPSysServer,
+  dwsWebEnvironment,
   SRWLock,
   Generics.Collections,
   System.Classes;
@@ -45,7 +46,7 @@ type
   TWebSocketHandler = class;
 
   //Handler events
-  TOnHandlerAcceptConnection = procedure (const InRequest: TSynHttpServerRequest; out OutRequest: TSynHttpServerResponse; var aAccept: Boolean) of object;
+  TOnHandlerAcceptConnection = procedure (aRequest: TWebRequest; aResponse: TWebResponse; var aAccept: Boolean) of object;
 
   TWebSocketHandlerMessage = class (TWebSocketMessage)
   private
@@ -73,7 +74,7 @@ type
     constructor Create(const aFragmentsBufferSize: Cardinal = C_DEFAULT_FRAGMENT_BUFFER_SIZE);
     destructor Destroy; override;
 
-    procedure AcceptConnection(const InRequest: TSynHttpServerRequest; out OutRequest: TSynHttpServerResponse; var aAccept: Boolean);
+    procedure AcceptConnection(aRequest: TWebRequest; aResponse: TWebResponse; var aAccept: Boolean);
 
     property OnAcceptConnection: TOnHandlerAcceptConnection read fOnAcceptConnection write fOnAcceptConnection;
   end;
@@ -87,11 +88,10 @@ uses
 
 { TWebSocketHandler }
 
-procedure TWebSocketHandler.AcceptConnection(const InRequest: TSynHttpServerRequest;
-  out OutRequest: TSynHttpServerResponse; var aAccept: Boolean);
+procedure TWebSocketHandler.AcceptConnection(aRequest: TWebRequest; aResponse: TWebResponse; var aAccept: Boolean);
 begin
   if Assigned(fOnAcceptConnection) then
-    fOnAcceptConnection(InRequest, OutRequest, aAccept)
+    fOnAcceptConnection(aRequest, aResponse, aAccept)
   else
     aAccept := False;
 end;
@@ -147,6 +147,8 @@ procedure TWebSocketHandler.TriggerWebSocketReceiveBinaryBufferFragment(const aW
   const aBuffer: Pointer; const aBufferSize: Cardinal);
 begin
   inherited;
+
+  //ToDo: check whenever buffer size is too high, request new buffer size or notify of message fragment
   aWebSocket.BinaryBuffer.Write(aBuffer^, aBufferSize);
 end;
 
@@ -154,6 +156,8 @@ procedure TWebSocketHandler.TriggerWebSocketReceiveUTF8Buffer(const aWebSocket: 
   const aBuffer: Pointer; const aBufferSize: Cardinal);
 begin
   inherited;
+
+  fUTF8Message.fIsFragment := False;
 
   if aWebSocket.UTF8Buffer.Size > 0 then
   begin
@@ -177,6 +181,8 @@ procedure TWebSocketHandler.TriggerWebSocketReceiveUTF8BufferFragment(const aWeb
   const aBuffer: Pointer; const aBufferSize: Cardinal);
 begin
   inherited;
+
+  //ToDo: check whenever buffer size is too high, request new buffer size or notify of message fragment
   aWebSocket.UTF8Buffer.Write(aBuffer^, aBufferSize);
 end;
 

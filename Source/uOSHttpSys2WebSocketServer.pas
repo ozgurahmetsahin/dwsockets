@@ -35,7 +35,8 @@ uses
   uOSWebSocketHandler,
   uOSTransportHttpSys2,
   dwsHTTPSysAPI,
-  dwsHTTPSysServer;
+  dwsHTTPSysServer,
+  dwsWebEnvironment;
 
 type
   THttpApi2WebSocketServerRequestContext = record
@@ -59,7 +60,7 @@ type
     procedure AfterWaitForNextRequest(const aCurRequest: PHTTP_REQUEST_V2); override;
     function GetHttpResponseFlags: Cardinal; override;
 
-    function UpgradeToWebSocket(const inRequest: TSynHttpServerRequest; var outResponse: TSynHttpServerResponse): Integer;
+    function UpgradeToWebSocket(aRequest: TWebRequest; aResponse: TWebResponse): Integer;
   public
     constructor Create(CreateSuspended : Boolean; const aWebSocketThreadsCount: Cardinal; const aConcurencyLevel: Cardinal);
     constructor CreateClone(From : THttpApi2Server);
@@ -67,7 +68,7 @@ type
 
     procedure Clone(ChildThreadCount: Integer);
 
-    function DoRequest(const InRequest : TSynHttpServerRequest; out OutRequest : TSynHttpServerResponse) : Cardinal; override;
+    procedure DoRequest(aRequest : TWebRequest; aResponse : TWebResponse); override;
 
     function AddWebSocketUrl(const aHandler: TWebSocketHandler; const aRoot : string; aPort : Integer;
       isHttps : Boolean; const aDomainName : string = '*') : Integer;
@@ -78,6 +79,17 @@ implementation
 uses
   uOSWebSocketAPI;
 
+const
+   C_KNOWNHEADERS_NAME : array [reqCacheControl..reqUserAgent] of PAnsiChar = (
+      'Cache-Control', 'Connection', 'Date', 'Keep-Alive', 'Pragma', 'Trailer',
+      'Transfer-Encoding', 'Upgrade', 'Via', 'Warning', 'Allow', 'Content-Length',
+      'Content-Type', 'Content-Encoding', 'Content-Language', 'Content-Location',
+      'Content-MD5', 'Content-Range', 'Expires', 'Last-Modified', 'Accept',
+      'Accept-Charset', 'Accept-Encoding', 'Accept-Language', 'Authorization',
+      'Cookie', 'Expect', 'From', 'Host', 'If-Match', 'If-Modified-Since',
+      'If-None-Match', 'If-Range', 'If-Unmodified-Since', 'Max-Forwards',
+      'Proxy-Authorization', 'Referer', 'Range', 'TE', 'Translate', 'User-Agent');
+
 function HttpSys2ToWebSocketHeaders(const aHttpHeaders : HTTP_REQUEST_HEADERS): WEB_SOCKET_HTTP_HEADER_ARR;
 var
   headerCnt: Integer;
@@ -85,11 +97,11 @@ var
   h : THttpHeader;
   p : PHTTP_UNKNOWN_HEADER;
 begin
-  Assert(Low(KNOWNHEADERS_NAME) = Low(aHttpHeaders.KnownHeaders));
-  Assert(High(KNOWNHEADERS_NAME) = High(aHttpHeaders.KnownHeaders));
+  Assert(Low(C_KNOWNHEADERS_NAME) = Low(aHttpHeaders.KnownHeaders));
+  Assert(High(C_KNOWNHEADERS_NAME) = High(aHttpHeaders.KnownHeaders));
 
   headerCnt := 0;
-  for h := Low(KNOWNHEADERS_NAME) to High(KNOWNHEADERS_NAME) do
+  for h := Low(C_KNOWNHEADERS_NAME) to High(C_KNOWNHEADERS_NAME) do
     if aHttpHeaders.KnownHeaders[h].RawValueLength <> 0 then
       Inc(headerCnt);
 
@@ -99,11 +111,11 @@ begin
 
   SetLength(Result, headerCnt);
   idx := 0;
-  for h := Low(KNOWNHEADERS_NAME) to High(KNOWNHEADERS_NAME) do
+  for h := Low(C_KNOWNHEADERS_NAME) to High(C_KNOWNHEADERS_NAME) do
     if aHttpHeaders.KnownHeaders[h].RawValueLength <> 0 then
     begin
-      Result[idx].pcName := @KNOWNHEADERS_NAME[h][1];
-      Result[idx].ulNameLength := Length(KNOWNHEADERS_NAME[h]);
+      Result[idx].pcName := C_KNOWNHEADERS_NAME[h];
+      Result[idx].ulNameLength := Length(C_KNOWNHEADERS_NAME[h]);
 
       Result[idx].pcValue := aHttpHeaders.KnownHeaders[h].pRawValue;
       Result[idx].ulValueLength := aHttpHeaders.KnownHeaders[h].RawValueLength;
@@ -229,8 +241,7 @@ begin
   inherited;
 end;
 
-function THttpApi2WebSocketServer.DoRequest(const InRequest: TSynHttpServerRequest;
-  out OutRequest: TSynHttpServerResponse): Cardinal;
+procedure THttpApi2WebSocketServer.DoRequest(aRequest: TWebRequest; aResponse: TWebResponse);
 var
   acceptConnection: Boolean;
 begin
@@ -239,12 +250,12 @@ begin
   //Check if handler can accept request based on http headers, e.g. extension and protocol match
   fWebSocketRequestContext.WebSocketHandler := TWebSocketHandler(fWebSocketRequestContext.HttpRequest^.UrlContext);
   if Assigned(fWebSocketRequestContext.WebSocketHandler) then
-    fWebSocketRequestContext.WebSocketHandler.AcceptConnection(InRequest, OutRequest, acceptConnection);
+    fWebSocketRequestContext.WebSocketHandler.AcceptConnection(aRequest, aResponse, acceptConnection);
 
   if acceptConnection then
-    Result := UpgradeToWebSocket(InRequest, OutRequest)
+    aResponse.StatusCode := UpgradeToWebSocket(aRequest, aResponse)
   else
-    Result := inherited DoRequest(InRequest, OutRequest);
+    inherited DoRequest(aRequest, aResponse);
 end;
 
 function THttpApi2WebSocketServer.GetHttpResponseFlags: Cardinal;
@@ -255,20 +266,21 @@ begin
     Result := inherited;
 end;
 
-function THttpApi2WebSocketServer.UpgradeToWebSocket(const inRequest: TSynHttpServerRequest;
-  var outResponse: TSynHttpServerResponse): Integer;
+function THttpApi2WebSocketServer.UpgradeToWebSocket(aRequest: TWebRequest; aResponse: TWebResponse): Integer;
 var
   webSocket: TWebSocketServer;
   wsRequestHeaders: WEB_SOCKET_HTTP_HEADER_ARR; //WEB_SOCKET_HTTP_HEADER_ARR;
+  outHeaders: RawByteString;
 begin
   webSocket := TWebSocketServer.Create(fWebSocketRequestContext.WebSocketHandler);
   wsRequestHeaders := HttpSys2ToWebSocketHeaders(fWebSocketRequestContext.HttpRequest^.Headers);
 
-  outResponse.OutContent := '';
-  outResponse.OutContentType := '';
+  aResponse.ContentData := '';
+  aResponse.ContentType := '';
 
-  if webSocket.PerformHandshake(@wsRequestHeaders[0], Length(wsRequestHeaders), outResponse.OutCustomHeader) then
+  if webSocket.PerformHandshake(@wsRequestHeaders[0], Length(wsRequestHeaders), outHeaders) then
   begin
+    aResponse.Headers.Text := UTF8ToString(outHeaders);
     fWebSocketRequestContext.WebSocketServer := webSocket;
     Result := 101;
   end
